@@ -10,7 +10,6 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
-primitive-db = "primitive_db:main"
 project = "primitive_db.main:main"
 
 [build-system]
