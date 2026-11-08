@@ -27,30 +27,33 @@ from primitive_db.utils import (
 
 
 def print_help():
-    """Выводит справочную информацию."""
-    print(
-        """
-***Операции с данными***
+    """Выводит справку по командам."""
 
-Функции:
-insert into <таблица> values (<значения>) - создать запись.
-select from <таблица> - прочитать все записи.
-select from <таблица> where <столбец> = <значение> - поиск записей.
-update <таблица> set <столбец> = <значение> where <столбец> = <значение> 
-- обновить записи.
-delete from <таблица> where <столбец> = <значение> - удалить записи.
-info <таблица> - информация о таблице.
-create_table <таблица> <столбец:тип> ... - создать таблицу.
-list_tables - показать список таблиц.
-drop_table <таблица> - удалить таблицу.
-help - справочная информация.
-exit - выход из программы.
-"""
-    )
+    print("""
+Доступные команды:
+
+Управление таблицами:
+  create_table <имя> <столбец:тип> ...
+  list_tables
+  drop_table <имя>
+  info <имя>
+
+Работа с записями:
+  insert into <таблица> values (<значения>)
+  select from <таблица>
+  select from <таблица> where <условие>
+  update <таблица> set <условия> where <условие>
+  delete from <таблица> where <условие>
+
+Дополнительные команды:
+  help
+  exit
+""")
 
 
 def print_records(records):
-    """Выводит записи в виде таблицы PrettyTable."""
+    """Выводит записи с помощью PrettyTable."""
+
     if not records:
         print("Записей не найдено.")
         return
@@ -65,9 +68,10 @@ def print_records(records):
 
 
 def validate_set_clause(metadata, table_name, set_clause):
-    """Проверяет столбцы и типы обновляемых значений."""
+    """Проверяет поля и типы значений для UPDATE."""
+
     if table_name not in metadata:
-        raise ValueError(f'Таблица "{table_name}" не существует.')
+        raise ValueError(f"Таблица '{table_name}' не существует.")
 
     columns = metadata[table_name]
 
@@ -76,20 +80,19 @@ def validate_set_clause(metadata, table_name, set_clause):
             raise ValueError("Изменять ID запрещено.")
 
         if column not in columns:
-            raise ValueError(f'Столбца "{column}" не существует.')
+            raise ValueError(f"Столбец '{column}' не существует.")
 
         validate_value(value, columns[column])
 
 
 def run():
-    """Запускает интерфейс базы данных."""
+    """Главный цикл программы."""
+
     print_help()
 
     while True:
         try:
-            user_input = prompt.string(
-                "\n>>> Введите команду: "
-            ).strip()
+            user_input = prompt.string("\n>>> Введите команду: ").strip()
 
             if not user_input:
                 continue
@@ -109,17 +112,18 @@ def run():
                 args = shlex.split(user_input)
 
                 if len(args) < 3:
-                    raise ValueError(
-                        "Укажите имя таблицы и хотя бы один столбец."
-                    )
+                    raise ValueError("Укажите имя таблицы и хотя бы один столбец.")
 
-                metadata = create_table(
+                new_metadata = create_table(
                     metadata,
                     args[1],
                     args[2:],
                 )
 
-                save_metadata(META_FILE, metadata)
+                if new_metadata is None:
+                    continue
+
+                save_metadata(META_FILE, new_metadata)
                 continue
 
             # LIST TABLES
@@ -132,15 +136,20 @@ def run():
                 args = shlex.split(user_input)
 
                 if len(args) != 2:
-                    raise ValueError(
-                        "Использование: drop_table <имя_таблицы>"
-                    )
+                    raise ValueError("Формат команды: drop_table <имя>.")
 
-                metadata = drop_table(metadata, args[1])
+                table_name = args[1]
 
-                save_metadata(META_FILE, metadata)
-                delete_table_data(args[1])
+                new_metadata = drop_table(
+                    metadata,
+                    table_name,
+                )
 
+                if new_metadata is None:
+                    continue
+
+                save_metadata(META_FILE, new_metadata)
+                delete_table_data(table_name)
                 continue
 
             # INSERT
@@ -151,7 +160,6 @@ def run():
 
             if match:
                 table_name, values_text = match.groups()
-
                 values = parse_insert_values(values_text)
 
                 table_data = insert(
@@ -160,13 +168,11 @@ def run():
                     values,
                 )
 
+                if table_data is None:
+                    continue
+
                 new_id = table_data[-1]["ID"]
-
-                print(
-                    f'Запись с ID={new_id} успешно добавлена '
-                    f'в таблицу "{table_name}".'
-                )
-
+                print(f"Запись успешно добавлена. ID: {new_id}")
                 continue
 
             # SELECT
@@ -179,17 +185,11 @@ def run():
                 table_name, where_text = match.groups()
 
                 if table_name not in metadata:
-                    raise ValueError(
-                        f'Таблица "{table_name}" не существует.'
-                    )
+                    raise ValueError(f"Таблица '{table_name}' не существует.")
 
                 table_data = load_table_data(table_name)
 
-                where_clause = (
-                    parse_conditions(where_text)
-                    if where_text
-                    else None
-                )
+                where_clause = parse_conditions(where_text) if where_text else None
 
                 if where_clause is not None:
                     validate_conditions(
@@ -199,6 +199,9 @@ def run():
                     )
 
                 records = select(table_data, where_clause)
+
+                if records is None:
+                    continue
 
                 print_records(records)
                 continue
@@ -213,9 +216,7 @@ def run():
                 table_name, set_text, where_text = match.groups()
 
                 if table_name not in metadata:
-                    raise ValueError(
-                        f'Таблица "{table_name}" не существует.'
-                    )
+                    raise ValueError(f"Таблица '{table_name}' не существует.")
 
                 set_clause = parse_conditions(set_text)
                 where_clause = parse_conditions(where_text)
@@ -243,20 +244,23 @@ def run():
                     )
                 ]
 
-                table_data = update(
+                new_table_data = update(
                     table_data,
                     set_clause,
                     where_clause,
                 )
 
+                if new_table_data is None:
+                    continue
+
                 if updated_ids:
-                    save_table_data(table_name, table_data)
+                    save_table_data(
+                        table_name,
+                        new_table_data,
+                    )
 
                     for record_id in updated_ids:
-                        print(
-                            f"Запись с ID={record_id} "
-                            f'в таблице "{table_name}" успешно обновлена.'
-                        )
+                        print(f"Запись с ID {record_id} обновлена.")
                 else:
                     print("Подходящих записей не найдено.")
 
@@ -272,9 +276,7 @@ def run():
                 table_name, where_text = match.groups()
 
                 if table_name not in metadata:
-                    raise ValueError(
-                        f'Таблица "{table_name}" не существует.'
-                    )
+                    raise ValueError(f"Таблица '{table_name}' не существует.")
 
                 where_clause = parse_conditions(where_text)
 
@@ -295,18 +297,22 @@ def run():
                     )
                 ]
 
-                table_data = delete(
+                new_table_data = delete(
                     table_data,
                     where_clause,
                 )
 
+                if new_table_data is None:
+                    continue
+
                 if deleted_ids:
-                    save_table_data(table_name, table_data)
+                    save_table_data(
+                        table_name,
+                        new_table_data,
+                    )
 
                     for record_id in deleted_ids:
-                        print(
-                            f"Запись с ID={record_id} успешно удалена."
-                        )
+                        print(f"Запись с ID {record_id} удалена.")
                 else:
                     print("Подходящих записей не найдено.")
 
@@ -322,16 +328,13 @@ def run():
                 table_name = match.group(1)
 
                 if table_name not in metadata:
-                    raise ValueError(
-                        f'Таблица "{table_name}" не существует.'
-                    )
+                    raise ValueError(f"Таблица '{table_name}' не существует.")
 
                 columns = metadata[table_name]
                 table_data = load_table_data(table_name)
 
                 columns_info = ", ".join(
-                    f"{name}:{column_type}"
-                    for name, column_type in columns.items()
+                    f"{name}:{column_type}" for name, column_type in columns.items()
                 )
 
                 print(f"Таблица: {table_name}")
@@ -342,5 +345,5 @@ def run():
 
             print("Неизвестная команда. Введите help.")
 
-        except (ValueError, SyntaxError, TypeError, KeyError) as error:
+        except (ValueError, SyntaxError, TypeError, KeyError, OSError) as error:
             print(f"Ошибка: {error}")

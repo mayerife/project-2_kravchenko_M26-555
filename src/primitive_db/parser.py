@@ -72,9 +72,7 @@ def parse_conditions(text):
         column, value = match.groups()
 
         if column in conditions:
-            raise ValueError(
-                f"Столбец {column} указан несколько раз."
-            )
+            raise ValueError(f"Столбец {column} указан несколько раз.")
 
         conditions[column] = parse_value(value)
 
@@ -83,7 +81,4 @@ def parse_conditions(text):
 
 def parse_insert_values(text):
     """Разбирает значения команды insert."""
-    return [
-        parse_value(value)
-        for value in split_conditions(text)
-    ]
+    return [parse_value(value) for value in split_conditions(text)]
