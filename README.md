@@ -251,16 +251,16 @@ database
 
 Ниже представлена запись установки пакета, запуска базы данных, создания, просмотра и удаления таблицы:
 
-[![Демонстрация работы Primitive DB](https://asciinema.org/a/j7PLsyRh4r2zHGk0.svg)](https://asciinema.org/a/j7PLsyRh4r2zHGk0)
+https://asciinema.org/a/j7PLsyRh4r2zHGk0
+
 
 ### Демонстрация CRUD-операций
 
 Добавление, чтение, обновление и удаление записей, а также хранение данных в JSON-файлах.
 
-```markdown
-[![Демонстрация CRUD-операций](https://asciinema.org/a/bL7DDBKPWqeetBeX.svg)](https://asciinema.org/a/bL7DDBKPWqeetBeX)
-```
+https://asciinema.org/a/bL7DDBKPWqeetBeX
+
 
 ### Финальная демонстрация декораторов
 
-[![Финальная демонстрация Primitive DB](https://asciinema.org/a/E99BYbv9SCs3EktN.svg)](https://asciinema.org/a/E99BYbv9SCs3EktN)
+https://asciinema.org/a/E99BYbv9SCs3EktN
